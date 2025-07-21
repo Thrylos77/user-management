@@ -8,8 +8,7 @@ class Role(models.TextChoices):
     MANAGER = 'MANAGER', 'Manager'
 
 class User(AbstractUser):
-    id_user = models.AutoField(primary_key=True)  # Remplace l'id de base
-
+    id_user = models.AutoField(primary_key=True)  # Otherwise the name "id" will be used by default
     lastname = models.CharField(max_length=40, null=False)
     firstname = models.CharField(max_length=120, null=False)
     username = models.CharField(max_length=60, unique=True, null=False)

@@ -149,4 +149,8 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 

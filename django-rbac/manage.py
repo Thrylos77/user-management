@@ -14,6 +14,15 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    # Automatic admin creation when running the server
+    if 'runserver' in sys.argv:
+        import django
+        django.setup()
+        from django.conf import settings
+        if getattr(settings, 'DEBUG', False) and os.environ.get('RUN_MAIN') == 'true':
+            from django.core.management import call_command
+            call_command('init_admin')
+    
     execute_from_command_line(sys.argv)
 
 
