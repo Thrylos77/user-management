@@ -24,7 +24,7 @@ This repository contains three user management systems implementing Role-Based A
 
 Each subproject has its own setup instructions. Please refer to the README or documentation inside each folder.
 
----
+-------
 
 ## 🇫🇷 Français
 

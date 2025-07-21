@@ -18,6 +18,7 @@ __pycache__/
 # Ignore les fichiers de configuration secrets
 .env
 .env.*
+**/.env
 **/.env.*
 secrets.json
 
@@ -50,8 +51,6 @@ secrets.json
 **/storage/framework/cache/data
 **/storage/logs
 **/bootstrap/cache/
-**/.env
-**/.env.example
 **/.gitattributes
 **/.phpunit.result.cache
 **/.phpunit.xml
