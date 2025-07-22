@@ -17,4 +17,5 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER)
 
+
     REQUIRED_FIELDS = ['email', 'firstname', 'lastname']
