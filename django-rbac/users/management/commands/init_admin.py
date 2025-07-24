@@ -41,11 +41,11 @@ class Command(BaseCommand):
                     username=env["SUPERUSER_USERNAME"],
                     email=env["SUPERUSER_EMAIL"],
                     password=env["SUPERUSER_PASSWORD"],
-                    firstname=env["SUPERUSER_FIRSTNAME"],
-                    lastname=env["SUPERUSER_LASTNAME"],
+                    first_name=env["SUPERUSER_FIRSTNAME"],
+                    last_name=env["SUPERUSER_LASTNAME"],
                     role="ADMIN",
                 )
-                self.stdout.write(self.style.SUCCESS("✔️ Superuser created successfully."))
+                self.stdout.write(self.style.SUCCESS("✔️  Superuser created successfully."))
             except IntegrityError as e:
                 self.stdout.write(self.style.ERROR(f"❌ Error while creating superuser: {e}"))
         else:

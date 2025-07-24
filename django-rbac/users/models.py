@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from simple_history.models import HistoricalRecords
 
 # Create your models here.
 class Role(models.TextChoices):
@@ -8,14 +9,10 @@ class Role(models.TextChoices):
     MANAGER = 'MANAGER', 'Manager'
 
 class User(AbstractUser):
-    id_user = models.AutoField(primary_key=True)  # Otherwise the name "id" will be used by default
-    lastname = models.CharField(max_length=40, null=False)
-    firstname = models.CharField(max_length=120, null=False)
-    username = models.CharField(max_length=60, unique=True, null=False)
-    password = models.CharField(max_length=64, null=False)
-    email = models.EmailField(max_length=60, null=False)
-
+    # AbstractUser provides: id, username, first_name, last_name, email, password, etc.
+    # We only need to add our custom fields.
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.USER)
+    history = HistoricalRecords(excluded_fields=['last_login'])
 
-
-    REQUIRED_FIELDS = ['email', 'firstname', 'lastname']
+    # ['email', 'username', 'password'] by default are in REQUIRED_FIELDS from AbstractUser.
+    REQUIRED_FIELDS = ['first_name', 'last_name']
