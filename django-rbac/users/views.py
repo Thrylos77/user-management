@@ -1,16 +1,16 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rbac.permission_control import AutoPermissionMixin
 from .models import User
 from .serializers import (
-        UserSerializer, RegisterSerializer, 
-        ChangePasswordSerializer, RoleSerializer, LogoutSerializer,
-        HistoricalUserSerializer,
+        UserSerializer, RegisterSerializer, LogoutSerializer,
+        ChangePasswordSerializer, HistoricalUserSerializer,
     )
 from rest_framework import status
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from users.logs.utils import log_action
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView as SimpleJWTTokenObtainPairView
+
 
 # Custom TokenObtainPairView to log user login
 class TokenObtainPairView(SimpleJWTTokenObtainPairView):
@@ -18,6 +18,7 @@ class TokenObtainPairView(SimpleJWTTokenObtainPairView):
     Takes a set of user credentials and returns an access and refresh JSON web
     token pair to prove the authentication of those credentials. Also logs the login action.
     """
+    permission_classes = [permissions.AllowAny]
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         
@@ -30,9 +31,9 @@ class TokenObtainPairView(SimpleJWTTokenObtainPairView):
         return response
 
 # Register a new user
-class RegisterView(generics.CreateAPIView):
+class RegisterView(AutoPermissionMixin, generics.CreateAPIView):
     serializer_class = RegisterSerializer
-    permission_classes = [permissions.IsAdminUser]
+    resource = "user"
 
 # This view allows users to retrieve their own details
 class UserDetailView(generics.RetrieveAPIView):
@@ -53,14 +54,13 @@ class UserDetailView(generics.RetrieveAPIView):
         ),
     ]
 )
-
-class UserListView(generics.ListAPIView):
+class UserListView(AutoPermissionMixin, generics.ListAPIView):
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]
+    resource = "user"
 
     def get_queryset(self):
         is_active = self.request.query_params.get('is_active')
-        queryset = User.objects.all()
+        queryset = User.objects.all().order_by('username')
         if is_active is not None:
             # Convert the string 'true' or 'false' to a boolean
             is_active_bool = is_active.lower() == 'true'
@@ -70,11 +70,12 @@ class UserListView(generics.ListAPIView):
         return queryset
 
 # This view allows admins to retrieve, update, or delete a user by their ID
-class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+class UserRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     lookup_field = 'pk'
-    permission_classes = [permissions.IsAdminUser]
+    resource = "user"
+
     # Destroy method is overridden to perform a soft delete
     # Instead of deleting the user, we deactivate them
     def destroy(self, request, *args, **kwargs):
@@ -84,9 +85,9 @@ class UserRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return Response({'detail': 'User has been deactivated (soft delete).'}, status=status.HTTP_204_NO_CONTENT)
 
 # This view allows authenticated users to change their password
-class ChangePasswordView(generics.GenericAPIView):
+class ChangePasswordView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = ChangePasswordSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    resource = "user"
 
     def post(self, request, *args, **kwargs):
         user = self.request.user
@@ -97,46 +98,12 @@ class ChangePasswordView(generics.GenericAPIView):
         user.set_password(serializer.validated_data['new_password'])
         user.save()
 
-        # Log the action
-        log_action( 
-            user=request.user,
-            action='CHANGE_PASSWORD',
-            details='Changed own password'
-        )
         return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
 
-class RoleListView(generics.ListAPIView):
-    serializer_class = RoleSerializer
-    permission_classes = [permissions.IsAdminUser]
-    
-    def get(self, request, *args, **kwargs):
-        from .models import Role # Import here to avoid circular dependency issues
-        roles = [{'value': role.value, 'label': role.label} for role in Role.choices]
-        serializer = self.get_serializer(roles, many=True)
-        return Response(serializer.data)
-
-class UserHistoryListView(generics.ListAPIView):
-    # Retrieves the change history for a specific user.
-    serializer_class = HistoricalUserSerializer
-    permission_classes = [permissions.IsAdminUser]
-
-    def get_queryset(self):
-        user_pk = self.kwargs['pk']
-        return User.history.filter(id=user_pk).order_by('-history_date')
-
-class AllUserHistoryListView(generics.ListAPIView):
-    """
-    Retrieves the complete change history for all users, ordered by most recent first.
-    This provides a full audit trail for the system.
-    """
-    serializer_class = HistoricalUserSerializer
-    permission_classes = [permissions.IsAdminUser]
-    queryset = User.history.all().order_by('-history_date')
-
 # A view for logging user logout and blacklisting the refresh token
-class LogoutView(generics.GenericAPIView):
+class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = LogoutSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    resource = "user"
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -147,3 +114,30 @@ class LogoutView(generics.GenericAPIView):
         log_action(request.user, 'LOGOUT', 'User logged out.')
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+# ----- Historical Read -----
+
+class UserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
+    # Retrieves the change history for a specific user.
+    serializer_class = HistoricalUserSerializer
+    resource = "user"
+
+    def get_queryset(self):
+        user_pk = self.kwargs['pk']
+        return User.history.filter(id=user_pk).order_by('-history_date')
+
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="all_user_history"
+    )
+)
+class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
+    """
+    Retrieves the complete change history for all users, ordered by most recent first.
+    This provides a full audit trail for the system.
+    """
+    serializer_class = HistoricalUserSerializer
+    resource = "user"
+    queryset = User.history.all().order_by('-history_date')

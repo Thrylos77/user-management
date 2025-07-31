@@ -27,7 +27,7 @@ load_dotenv()
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
@@ -135,7 +135,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'drf_spectacular_sidecar',
     'simple_history',
-    'users',
+    'users.apps.UsersConfig', # Use AppConfig to ensure signals are loaded
+    'rbac.apps.RbacConfig',   # Use AppConfig to ensure signals are loaded
 ]
 
 # REST Framework settings and JWT Authentication

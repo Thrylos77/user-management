@@ -13,14 +13,18 @@ admin.site.unregister(BlacklistedToken)
 @admin.register(User)
 class CustomUserAdmin(SimpleHistoryAdmin, UserAdmin):
     # Customize the fields displayed in the user list
-    list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'is_staff')
-    # Add the 'role' field to the user creation and edit forms
-    fieldsets = UserAdmin.fieldsets + (
-        ('Role', {'fields': ('role',)}),
-    )
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Role', {'fields': ('role',)}),
-    )
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', '_roles')
+
+    def _roles(self, obj):
+        return ", ".join([role.name for role in obj.roles.all()])
+
+    _roles.short_description = 'Rôles'
+
+    def get_queryset(self, request):
+        # Optimisation pour éviter le problème N+1
+        queryset = super().get_queryset(request)
+        return queryset.prefetch_related('roles')
+
 
 # This code registers the AuditLog model with the Django admin interface.
 # It customizes the admin display for AuditLog entries:
@@ -36,6 +40,7 @@ class AuditLogAdmin(admin.ModelAdmin):
 @admin.register(OutstandingToken)
 class OutstandingTokenAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'jti', 'created_at', 'expires_at')
+    list_select_related = ('user',)
     search_fields = ('user__username', 'jti')
     ordering = ('-created_at',)
 

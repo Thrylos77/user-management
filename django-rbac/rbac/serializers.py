@@ -1,0 +1,95 @@
+import json
+from rest_framework import serializers
+from .models import Role, Permission
+from drf_spectacular.utils import extend_schema_field
+
+# ----- Serializers -----
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ('id', 'code', 'label', 'description')
+
+
+class RoleListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ('id', 'name', 'description')
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    # For READ (GET): Displays full, nested Permission objects.
+    permissions = serializers.StringRelatedField(many=True, read_only=True)
+    # For WRITE (POST, PUT, PATCH): Accepts a list of permission IDs.
+    permission_ids = serializers.PrimaryKeyRelatedField(
+        many=True, 
+        queryset=Permission.objects.all(), 
+        write_only=True, 
+        source='permissions', # This field updates the 'permissions' model relationship
+        help_text="List of permission IDs to associate with this role."
+    )
+
+    class Meta:
+        model = Role
+        # 'permissions' is for output (read), 'permission_ids' is for input (write).
+        fields = ('id', 'name', 'description', 'permissions', 'permission_ids')
+
+class RoleAssignmentSerializer(serializers.Serializer):
+    # Serializer for the role assignment/removal endpoints.
+    role_id = serializers.IntegerField(required=True, help_text="The ID of the role to assign or remove.")
+
+# ----- Historical Serializers -----
+
+class HistoricalPermissionSerializer(serializers.ModelSerializer):
+    history_user = serializers.StringRelatedField()
+    history_type_display = serializers.CharField(source='get_history_type_display', read_only=True)
+    changes = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Permission.history.model
+        fields = (
+            'history_id', 'history_date', 'history_type_display', 'history_user',
+            'changes', 'code', 'label', 'description'
+        )
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_changes(self, obj):
+        if obj.history_type == '~' and obj.prev_record:
+            delta = obj.diff_against(obj.prev_record)
+            return [{'field': change.field, 'old': change.old, 'new': change.new} for change in delta.changes]
+        return None
+
+
+class HistoricalRoleSerializer(serializers.ModelSerializer):
+    history_user = serializers.StringRelatedField()
+    history_type_display = serializers.CharField(source='get_history_type_display', read_only=True)
+    changes = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Role.history.model
+        fields = (
+            'history_id', 'history_date', 'history_type_display', 'history_user',
+            'changes', 'name', 'permissions',
+        )
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_permissions(self, obj):
+        """
+        Retrieves the snapshot of permission codes stored in the history record.
+        The snapshot is saved by the `add_permissions_snapshot` signal into the
+        `history_change_reason` field as a JSON string.
+        """
+        if not obj.history_change_reason:
+            return []
+        try:
+            data = json.loads(obj.history_change_reason)
+            return data.get('permissions', [])
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_changes(self, obj):
+        if obj.history_type == '~' and obj.prev_record:
+            delta = obj.diff_against(obj.prev_record)
+            return [{'field': change.field, 'old': change.old, 'new': change.new} for change in delta.changes]
+        return None

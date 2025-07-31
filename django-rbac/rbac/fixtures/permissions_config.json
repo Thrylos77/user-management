@@ -1,0 +1,50 @@
+{
+  "permissions": [
+    {"code": "user.list", "label": "List all users"},
+    {"code": "user.view", "label": "View a user"},
+    {"code": "user.create", "label": "Create a user"},
+    {"code": "user.update", "label": "Update a user"},
+    {"code": "user.delete", "label": "Delete a user"},
+    {"code": "user.change_password_self", "label": "Change own password"},
+    {"code": "user.change_password", "label": "Change password of any user"},
+    {"code": "user.history.view", "label": "View history of a user"},
+    {"code": "user.history.view_all", "label": "View all user histories"},
+
+    {"code": "user.view_roles", "label": "View roles of a user"},
+    {"code": "user.update_roles", "label": "Update roles of a user"},
+
+    {"code": "permission.list", "label": "List all permissions"},
+    {"code": "permission.view", "label": "View a permission"},
+    {"code": "permission.update", "label": "Update a permission"},
+    {"code": "role.list", "label": "List all roles"},
+    {"code": "role.create", "label": "Create a role"},
+    {"code": "role.view", "label": "View a role"},
+    {"code": "role.update", "label": "Update a role"},
+    {"code": "role.delete", "label": "Delete a role"},
+
+    {"code": "auth.logout", "label": "Log out"},
+    {"code": "rbac.assign_role", "label": "Assign a role to a user"},
+    {"code": "rbac.remove_role", "label": "Remove a role from a user"}
+  ],
+  "roles": [
+    {
+      "name": "ADMIN",
+      "description": "Grants all permissions in the system. For administrative use only.",
+      "permissions": "ALL"
+    },
+    {
+      "name": "USER",
+      "description": "Default role for a new user. Can view and edit their own profile.",
+      "permissions": [
+        "user.view", "user.update", "user.change_password_self", "auth.logout"
+      ]
+    },
+    {
+      "name": "MANAGER",
+      "description": "Can manage other users, including creating them and viewing the user list.",
+      "permissions": [
+        "user.list", "user.view", "user.update", "user.create", "user.change_password_self", "auth.logout"
+      ]
+    }
+  ]
+}
