@@ -7,8 +7,10 @@
     {"code": "user.delete", "label": "Delete a user"},
     {"code": "user.change_password_self", "label": "Change own password"},
     {"code": "user.change_password", "label": "Change password of any user"},
+    {"code": "user.reset_password", "label": "Reset password of any user"},
     {"code": "user.history.view", "label": "View history of a user"},
     {"code": "user.history.view_all", "label": "View all user histories"},
+
 
     {"code": "user.view_roles", "label": "View roles of a user"},
     {"code": "user.update_roles", "label": "Update roles of a user"},
@@ -36,14 +38,16 @@
       "name": "USER",
       "description": "Default role for a new user. Can view and edit their own profile.",
       "permissions": [
-        "user.view", "user.update", "user.change_password_self", "auth.logout"
+        "user.view", "user.update", "user.change_password_self", 
+        "user.reset_password", "auth.logout"
       ]
     },
     {
       "name": "MANAGER",
       "description": "Can manage other users, including creating them and viewing the user list.",
       "permissions": [
-        "user.list", "user.view", "user.update", "user.create", "user.change_password_self", "auth.logout"
+        "user.list", "user.view", "user.update", "user.create", 
+        "user.change_password_self", "user.reset_password", "auth.logout"
       ]
     }
   ]

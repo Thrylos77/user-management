@@ -5,7 +5,7 @@
 import json
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import User, PasswordResetOTP
 
 from rbac.models import Role
 from drf_spectacular.utils import extend_schema_field
@@ -132,3 +132,35 @@ class HistoricalUserSerializer(serializers.ModelSerializer):
                     changes_list.append({'field': change.field, 'old': change.old, 'new': change.new})
             return changes_list
         return None
+    
+# Serializer for the OTP used in password reset
+class RequestOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("⚠️ User not found.")
+        self.context['user'] = user
+        return value
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(min_length=8)
+
+    def validate(self, data):
+        try:
+            user = User.objects.get(email=data['email'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"email": "User not found."})
+        otp_qs = PasswordResetOTP.objects.filter(user=user, code=data['otp'], is_used=False)
+        if not otp_qs.exists():
+            raise serializers.ValidationError({"otp": "Invalid or used OTP."})
+        otp_obj = otp_qs.latest('created_at')
+        if not otp_obj.is_valid():
+            raise serializers.ValidationError({"otp": "OTP expired."})
+        self.context['user'] = user
+        self.context['otp_obj'] = otp_obj
+        return data

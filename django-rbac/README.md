@@ -10,7 +10,9 @@ Includes user registration, authentication, password management, soft deletion, 
 - Custom user model with extensible roles (`ADMIN`, `USER`, `MANAGER`).
 - Secure JWT authentication (`djangorestframework-simplejwt`) with token rotation and blacklisting.
 - Full user lifecycle management (register, update, soft-delete).
+- **Dynamic RBAC**: Create and manage roles and permissions via the API.
 - Change password endpoint
+- Password reset via email OTP.
 - Soft delete (deactivation) instead of hard delete for users
 - List/filter users by active status
 - **Detailed Auditing**:
@@ -66,29 +68,45 @@ python manage.py runserver
 
 ## API Endpoints
 
-### 1.
-All endpoints are prefixed with `/api/`.
-Users and audit endpoints are prefixed with `/users/`
+All endpoints are prefixed with `/api/`. The table below shows the full path for each endpoint.
 
-| Method    | Endpoint             | Description                                                 | Permissions Required |
-|-----------|----------------------|-------------------------------------------------------------|----------------------|
-| **Auth**  |                      |                                                             |                      |
-| POST      | `connexion/token`    | Obtain JWT access and refresh tokens.                       | Public               |
-| POST      | `token/refresh/`     | Get a new access token using a refresh token.               | Public               |
-| POST      | `logout/`            | Invalidates the refresh token and logs the logout action.   | Authenticated        |
-| **Users** |                      |                                                             |                      |
-| GET       | `me/`                | Get current authenticated user's details.                   | Authenticated        |
-| POST      | `change-password/`   | Change own password.                                        | Authenticated        |
-| POST      | `register/`          | Register a new user.                                        | Admin only           |
-| GET       | `list/`              | List users (filter by `is_active`).                         | Admin only           |
-| GET       | `roles/`             | List available roles.                                       | Admin only           |
-| GET       | `<pk>/`              | Retrieve a specific user's details.                         | Admin only           |
-| PUT/PATCH | `<pk>/`              | Update a specific user's info.                              | Admin only           |
-| DELETE    | `<pk>/`              | Deactivate (soft delete) a user.                            | Admin only           |
-| **Audit** |                      |                                                             |                      |
-| GET       | `history/`           | Get the complete history of all user data changes.          | Admin only           |
-| GET       | `<pk>/history/`      | Get data change history for a specific user.                | Admin only           |
-| GET       | `audit-log/`         | Get the log of all user actions (login, etc.).              | Admin only           |
+| Method   | Endpoint                     | Description                                                 |
+|----------|------------------------------|-------------------------------------------------------------|
+**Auth**
+| POST     | `/login/`                    | Obtain JWT access and refresh tokens.                       |
+| POST     | `/token/refresh/`            | Get a new access token using a refresh token.               |
+| POST     | `/logout/`                   | Invalidates the refresh token and logs the logout action.   |
+**Users**
+| POST     | `/users/register/`           | Register a new user.                                        |
+| GET      | `/users/`                    | List users (filter by `is_active`).                         |
+| GET      | `/users/me/`                 | Get current authenticated user's details.                   |
+| POST     | `/users/change-password/`    | Change own password.                                        |
+| POST     | `/users/request-otp/`        | Request a One-Time Password (OTP) for password reset.       |
+| POST     | `/users/reset-password/`     | Reset password using a valid OTP.                           |
+| GET      | `/users/<pk>/`               | Retrieve a specific user's details.                         |
+| PUT/PATCH| `/users/<pk>/`               | Update a specific user's info.                              |
+| DELETE   | `/users/<pk>/`               | Deactivate (soft delete) a user.                            |
+**Audit**
+| GET      | `/users/history/`            | Get the complete history of all user data changes.          |
+| GET      | `/users/history/<pk>`        | Get data change history for a specific user.                |
+| GET      | `/users/audit-log/`          | Get the log of all user actions (login, etc.).              |
+
+**RBAC Management**
+| GET      | `/permissions/`              | List all available permissions.                             |
+| GET      | `/permissions/<pk>/`         | Retrieve a specific permission.                             |
+| PUT/PATCH| `/permissions/<pk>/`         | Update a permission's details (label, description).         |
+| GET      | `/roles/`                    | List all available roles.                                   |
+| POST     | `/roles/`                    | Create a new role with a set of permissions.                |
+| GET      | `/roles/<pk>/`               | Retrieve a specific role and its permissions.               |
+| PUT/PATCH| `/roles/<pk>/`               | Update a role's details and permissions.                    |
+| DELETE   | `/roles/<pk>/`               | Delete a role.                                              |
+| POST     | `/roles/assign/<user_id>/`   | Assign a role to a user.                                    |
+| POST     | `/roles/remove/<user_id>/`   | Remove a role from a user.                                  |
+**RBAC History**
+| GET      | `/permissions/history/`      | Get the complete history for all permissions.               |
+| GET      | `/permissions/history/<pk>/` | Get the history for a specific permission.                  |
+| GET      | `/roles/history/`            | Get the complete history for all roles.                     |
+| GET      | `/roles/history/<pk>/`       | Get the history for a specific role.                        |
 
 ---
 

@@ -26,6 +26,7 @@ DEFAULT_ACTION_MAP = {
     'update': 'update',
     'partial_update': 'update',
     'destroy': 'delete',
+    'reset_password': 'create',
     # Fallback APIView HTTP methods
     'GET': 'view',
     'POST': 'create',
@@ -43,14 +44,14 @@ class AutoPermissionMixin:
     default_permission_classes = (IsAuthenticated,)
 
     def get_permissions(self):
-        # Si c'est drf-spectacular, on ne vérifie rien
+        # If the view is a fake swagger view, return the default permissions
         if getattr(self, 'swagger_fake_view', False):
             return [cls() for cls in getattr(self, 'permission_classes', self.default_permission_classes)]
 
         if not self.resource:
             return [cls() for cls in getattr(self, 'permission_classes', self.default_permission_classes)]
 
-        # Récupère action (ViewSet) ou méthode HTTP
+        # Get action (ViewSet) or HTTP method
         action = getattr(self, 'action', None) or (self.request.method if hasattr(self, 'request') else None)
         perm_suffix = DEFAULT_ACTION_MAP.get(action)
 

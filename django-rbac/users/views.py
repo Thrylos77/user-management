@@ -1,16 +1,17 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rbac.permission_control import AutoPermissionMixin
-from .models import User
+from .models import User, PasswordResetOTP
 from .serializers import (
         UserSerializer, RegisterSerializer, LogoutSerializer,
         ChangePasswordSerializer, HistoricalUserSerializer,
+        RequestOTPSerializer, ResetPasswordSerializer
     )
 from rest_framework import status
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from users.logs.utils import log_action
 from rest_framework_simplejwt.views import TokenObtainPairView as SimpleJWTTokenObtainPairView
-
+from .utils import generate_otp, send_otp_email
 
 # Custom TokenObtainPairView to log user login
 class TokenObtainPairView(SimpleJWTTokenObtainPairView):
@@ -141,3 +142,36 @@ class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     serializer_class = HistoricalUserSerializer
     resource = "user"
     queryset = User.history.all().order_by('-history_date')
+
+
+# ----- Reset Password OTP management -----
+class RequestOTPView(AutoPermissionMixin, generics.CreateAPIView):
+    serializer_class = RequestOTPSerializer
+    resource = "user"
+
+    def perform_create(self, serializer):
+        user = serializer.context['user']
+        code = generate_otp()
+        PasswordResetOTP.objects.create(user=user, code=code)
+        print(f"Generated OTP: {code} for user: {user.email}")
+        send_otp_email(user.email, code)
+
+class ResetPasswordView(AutoPermissionMixin, generics.CreateAPIView):
+    serializer_class = ResetPasswordSerializer
+    resource = "user"
+
+    def perform_create(self, serializer):
+        user = serializer.context['user']
+        otp_obj = serializer.context['otp_obj']
+        new_password = serializer.validated_data['new_password']
+
+        user.set_password(new_password)
+        user.save()
+        otp_obj.is_used = True
+        otp_obj.save()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response({"detail": "✔️ Password reset successfully."}, status=status.HTTP_200_OK)
