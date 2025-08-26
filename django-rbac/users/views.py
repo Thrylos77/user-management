@@ -85,26 +85,15 @@ class UserRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdate
         user.save()
         return Response({'detail': 'User has been deactivated (soft delete).'}, status=status.HTTP_204_NO_CONTENT)
 
-# This view allows authenticated users to change their password
-class ChangePasswordView(AutoPermissionMixin, generics.GenericAPIView):
-    serializer_class = ChangePasswordSerializer
-    resource = "user"
 
-    def post(self, request, *args, **kwargs):
-        user = self.request.user
-        serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-
-        # Set the new password
-        user.set_password(serializer.validated_data['new_password'])
-        user.save()
-
-        return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
 
 # A view for logging user logout and blacklisting the refresh token
 class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = LogoutSerializer
-    resource = "user"
+    resource = "auth"
+    permission_code_map = {
+        'POST': resource + '.logout'
+    }
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -115,6 +104,39 @@ class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
         log_action(request.user, 'LOGOUT', 'User logged out.')
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ----- Password Change -----
+# For USER to change their own password
+class ChangeOwnPasswordView(AutoPermissionMixin, generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    resource = "user"
+    permission_code_map = {
+        'PATCH': resource + '.change_own_password'
+    }
+
+    def get_object(self):
+        return self.request.user
+
+# For role ADMIN or Superuser to change any User password
+class ChangePasswordView(AutoPermissionMixin, generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    resource = "user"
+    permission_code_map = {
+        'PATCH': resource + '.change_password'
+    }
+
+    def get_object(self):
+        user_id = self.kwargs.get('pk')
+        return self.get_queryset().filter(pk=user_id).first()
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser or user.has_permission("user.change_password"):
+            return User.objects.all()
+        # Fallback None if the user don't have the permission
+        return User.objects.none()
+
 
 
 
@@ -159,6 +181,9 @@ class RequestOTPView(AutoPermissionMixin, generics.CreateAPIView):
 class ResetPasswordView(AutoPermissionMixin, generics.CreateAPIView):
     serializer_class = ResetPasswordSerializer
     resource = "user"
+    permission_code_map = {
+        'POST': resource + '.reset_password'
+    }
 
     def perform_create(self, serializer):
         user = serializer.context['user']

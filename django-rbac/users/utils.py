@@ -1,5 +1,7 @@
 from django.core.mail import send_mail
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 import logging
 import random
 
@@ -9,23 +11,17 @@ def generate_otp():
 logger = logging.getLogger(__name__)
 def send_otp_email(email: str, otp: str):
     """
-    Sends the OTP to the user's email address.
+    Sends the OTP to the user's email address using an HTML template.
     """
     subject = 'Your One-Time Password (OTP) for Password Reset'
-    message = (
-        f"Hello,\n\n"
-        f"You have requested to reset your password. Use the following One-Time Password (OTP) to proceed:\n\n"
-        f"    {otp}\n\n"
-        f"This code will expire in 5 minutes. If you did not request a password reset, "
-        f"please ignore this email or contact our support team immediately.\n\n"
-        f"Thank you,\n"
-        f"The Support Team"
-    )
+    context = {'otp': otp}
+    html_message = render_to_string('emails/otp_email.html', context)
+    plain_message = strip_tags(html_message)
     email_from = settings.EMAIL_HOST_USER
     recipient_list = [email]
     
     try:
-        send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+        send_mail(subject, plain_message, email_from, recipient_list, html_message=html_message, fail_silently=False)
         logger.info(f"Successfully sent OTP to {email}")
     except Exception as e:
         logger.error(f"Error sending OTP to {email}: {e}")
