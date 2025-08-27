@@ -1,6 +1,6 @@
 import json
 from rest_framework import serializers
-from .models import Role, Permission
+from .models import Group, Role, Permission
 from drf_spectacular.utils import extend_schema_field
 
 # ----- Serializers -----
@@ -37,9 +37,48 @@ class RoleAssignmentSerializer(serializers.Serializer):
     # Serializer for the role assignment/removal endpoints.
     role_id = serializers.IntegerField(required=True, help_text="The ID of the role to assign or remove.")
 
+# --- Group Serializers ---
+class GroupListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['id', 'name', 'description']
+
+class GroupSerializer(serializers.ModelSerializer):
+    roles = RoleSerializer(many=True, read_only=True)  # Nested roles for read
+    role_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Role.objects.all(), write_only=True, source="roles"
+    )
+
+    class Meta:
+        model = Group
+        fields = ['id', 'name', 'description', 'roles', 'role_ids']
+
+class UserGroupAssignmentSerializer(serializers.Serializer):
+    group_id = serializers.IntegerField(required=True, help_text="ID of the group to assign or remove.")
+
+
 # ----- Historical Serializers -----
 
-class HistoricalPermissionSerializer(serializers.ModelSerializer):
+class HistoricalChangesMixin:
+    def get_changes(self, obj):
+        """
+        Return the modified fields and their old/new values
+        for objects with a change type of '~' (modification).
+        """
+        if obj.history_type != '~':
+            return {}
+
+        delta = obj.diff_against(obj.prev_record)
+        changes = {}
+        for change in delta.changes:
+            changes[change.field] = {
+                "old": change.old,
+                "new": change.new
+            }
+        return changes
+
+
+class HistoricalPermissionSerializer(serializers.ModelSerializer, HistoricalChangesMixin):
     history_user = serializers.StringRelatedField()
     history_type_display = serializers.CharField(source='get_history_type_display', read_only=True)
     changes = serializers.SerializerMethodField()
@@ -53,10 +92,7 @@ class HistoricalPermissionSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_changes(self, obj):
-        if obj.history_type == '~' and obj.prev_record:
-            delta = obj.diff_against(obj.prev_record)
-            return [{'field': change.field, 'old': change.old, 'new': change.new} for change in delta.changes]
-        return None
+        return super().get_changes(obj)
 
 
 class HistoricalRoleSerializer(serializers.ModelSerializer):
@@ -89,7 +125,32 @@ class HistoricalRoleSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_changes(self, obj):
-        if obj.history_type == '~' and obj.prev_record:
-            delta = obj.diff_against(obj.prev_record)
-            return [{'field': change.field, 'old': change.old, 'new': change.new} for change in delta.changes]
-        return None
+        return super().get_changes(obj)
+
+
+class HistoricalGroupSerializer(serializers.ModelSerializer):
+    history_user = serializers.StringRelatedField()
+    history_type_display = serializers.CharField(source='get_history_type_display', read_only=True)
+    changes = serializers.SerializerMethodField()
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Group.history.model
+        fields = (
+            'history_id', 'history_date', 'history_type_display', 'history_user',
+            'changes', 'name', 'roles',
+        )
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_roles(self, obj):
+        if not obj.history_change_reason:
+            return []
+        try:
+            data = json.loads(obj.history_change_reason)
+            return data.get('roles', [])
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_changes(self, obj):
+        return super().get_changes(obj)

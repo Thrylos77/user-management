@@ -1,9 +1,9 @@
 from django.urls import path
 from .views import (
-    AllPermissionHistoryListView, AllRoleHistoryListView, 
-    PermissionHistoryListView, PermissionListView, 
-    PermissionRetrieveUpdateView, RoleHistoryListView,
-    RoleListCreateView, RoleRetrieveUpdateDestroyView,
+    AddUserToGroupView, AllGroupHistoryListView, AllPermissionHistoryListView, AllRoleHistoryListView, 
+    GroupHistoryListView, GroupListCreateView, GroupRetrieveUpdateDestroyView, 
+    PermissionHistoryListView, PermissionListView, PermissionRetrieveUpdateView, RemoveUserFromGroupView, 
+    RoleHistoryListView, RoleListCreateView, RoleRetrieveUpdateDestroyView,
     AssignRoleToUserView, RemoveRoleFromUserView
 )
 
@@ -20,7 +20,15 @@ urlpatterns = [
     path('roles/history/<int:pk>/', RoleHistoryListView.as_view(), name='role-history-detail'),
     path('roles/history/', AllRoleHistoryListView.as_view(), name='role-history-list'),
     
+    # Groups
+    path('groups/', GroupListCreateView.as_view(), name='group-list-create'),
+    path('groups/<int:pk>/', GroupRetrieveUpdateDestroyView.as_view(), name='group-rud'),
+    path('groups/history/<int:pk>/', GroupHistoryListView.as_view(), name='group-history-detail'),
+    path('groups/history/', AllGroupHistoryListView.as_view(), name='group-history-list'),
+
     # Assignations
     path('roles/assign/<int:user_id>/', AssignRoleToUserView.as_view(), name='assign-role'),
-    path('roles/remove/<int:user_id>/', RemoveRoleFromUserView.as_view(), name='remove-role'),    
+    path('roles/remove/<int:user_id>/', RemoveRoleFromUserView.as_view(), name='remove-role'),
+    path('groups/add_user/<int:user_id>/', AddUserToGroupView.as_view(), name='add-user-to-group'),
+    path('groups/remove_user/<int:user_id>/', RemoveUserFromGroupView.as_view(), name='remove-user-from-group'),
 ]

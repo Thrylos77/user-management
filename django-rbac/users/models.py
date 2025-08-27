@@ -11,6 +11,7 @@ class User(AbstractUser):
     # We override the email field to make it unique, as it's not by default in AbstractUser.
     email = models.EmailField(_('email address'), unique=True)
     roles = models.ManyToManyField('rbac.Role', related_name='users', blank=True)
+    groups = models.ManyToManyField('rbac.Group', related_name='users', blank=True)
     history = HistoricalRecords(excluded_fields=['last_login'])
     
     # The default REQUIRED_FIELDS for AbstractUser is ['email'].

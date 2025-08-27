@@ -18,5 +18,4 @@ urlpatterns = [
     path('change-own-password/', ChangeOwnPasswordView.as_view(), name='change-own-password'),
     path('request-otp/', RequestOTPView.as_view(), name='request-otp'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
-    path('logout/', LogoutView.as_view(), name='logout')
 ]

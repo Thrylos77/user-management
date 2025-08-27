@@ -64,7 +64,11 @@ class AutoPermissionMixin:
             return [cls() for cls in getattr(self, 'permission_classes', self.default_permission_classes)]
 
         # Determine the "action" key
-        action_key = getattr(self, 'action', None) or self.custom_action or (self.request.method if hasattr(self, 'request') else None)
+        action_key = (
+            getattr(self, 'action', None) or 
+            getattr(self, 'custom_action', None)   # custom action if defined
+            or (self.request.method if hasattr(self, 'request') else None)
+        )
 
         # 1 : Try merged map (custom overrides default)
         perm_cod_map = self.get_permission_code_map()

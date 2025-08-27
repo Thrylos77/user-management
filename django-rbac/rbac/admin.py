@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Role, Permission
+from .models import Group, Role, Permission
 from simple_history.admin import SimpleHistoryAdmin
 
 @admin.register(Permission)
@@ -12,3 +12,9 @@ class RoleAdmin(SimpleHistoryAdmin):
     list_display = ("name", "description")
     search_fields = ("name", "description")
     filter_horizontal = ("permissions",)
+
+@admin.register(Group)
+class GroupAdmin(SimpleHistoryAdmin):
+    list_display = ("name", "description")
+    search_fields = ("name", "description")
+    filter_horizontal = ("roles",)

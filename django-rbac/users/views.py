@@ -70,6 +70,7 @@ class UserListView(AutoPermissionMixin, generics.ListAPIView):
             queryset = queryset.filter(is_active=True)  # Default, only active users are shown
         return queryset
 
+
 # This view allows admins to retrieve, update, or delete a user by their ID
 class UserRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
@@ -90,10 +91,6 @@ class UserRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdate
 # A view for logging user logout and blacklisting the refresh token
 class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = LogoutSerializer
-    resource = "auth"
-    permission_code_map = {
-        'POST': resource + '.logout'
-    }
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -106,8 +103,36 @@ class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ----- Password Change -----
-# For USER to change their own password
+# ----- Historical Read -----
+
+class UserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
+    # Retrieves the change history for a specific user.
+    serializer_class = HistoricalUserSerializer
+    resource = "user_history"
+
+    def get_queryset(self):
+        user_pk = self.kwargs['pk']
+        return User.history.filter(id=user_pk).order_by('-history_date')
+
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="all_user_history"
+    )
+)
+class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
+    """
+    Retrieves the complete change history for all users, ordered by most recent first.
+    This provides a full audit trail for the system.
+    """
+    serializer_class = HistoricalUserSerializer
+    resource = "user_history"
+    queryset = User.history.all().order_by('-history_date')
+
+
+
+# ----- Password management -----
+
+# USER to change their own password
 class ChangeOwnPasswordView(AutoPermissionMixin, generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
     resource = "user"
@@ -137,36 +162,7 @@ class ChangePasswordView(AutoPermissionMixin, generics.UpdateAPIView):
         # Fallback None if the user don't have the permission
         return User.objects.none()
 
-
-
-
-# ----- Historical Read -----
-
-class UserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
-    # Retrieves the change history for a specific user.
-    serializer_class = HistoricalUserSerializer
-    resource = "user"
-
-    def get_queryset(self):
-        user_pk = self.kwargs['pk']
-        return User.history.filter(id=user_pk).order_by('-history_date')
-
-@extend_schema_view(
-    get=extend_schema(
-        operation_id="all_user_history"
-    )
-)
-class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
-    """
-    Retrieves the complete change history for all users, ordered by most recent first.
-    This provides a full audit trail for the system.
-    """
-    serializer_class = HistoricalUserSerializer
-    resource = "user"
-    queryset = User.history.all().order_by('-history_date')
-
-
-# ----- Reset Password OTP management -----
+# Reset Password OTP management
 class RequestOTPView(AutoPermissionMixin, generics.CreateAPIView):
     serializer_class = RequestOTPSerializer
     resource = "user"

@@ -153,6 +153,7 @@ SPECTACULAR_SETTINGS = {
     'TITLE': 'User Management API',
     'DESCRIPTION': 'API backend for RBAC-based user managment',
     'VERSION': '1.0.0',
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 # JWT settings
