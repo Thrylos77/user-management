@@ -58,7 +58,7 @@ class GroupListCreateView(AutoPermissionMixin, generics.ListCreateAPIView):
 
 
 class GroupRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
-    queryset = Group.objects.prefetch_related('permissions').all()
+    queryset = Group.objects.prefetch_related('roles').all()
     serializer_class = GroupSerializer
     resource = "group"
 

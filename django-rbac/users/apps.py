@@ -5,4 +5,3 @@ class UsersConfig(AppConfig):
     name = 'users'
     def ready(self):
         import users.signals
-        from .logs import signals as log_signals

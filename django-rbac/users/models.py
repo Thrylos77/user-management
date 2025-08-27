@@ -12,6 +12,7 @@ class User(AbstractUser):
     email = models.EmailField(_('email address'), unique=True)
     roles = models.ManyToManyField('rbac.Role', related_name='users', blank=True)
     groups = models.ManyToManyField('rbac.Group', related_name='users', blank=True)
+
     history = HistoricalRecords(excluded_fields=['last_login'])
     
     # The default REQUIRED_FIELDS for AbstractUser is ['email'].
@@ -22,7 +23,9 @@ class User(AbstractUser):
     @property
     def all_permissions(self):
         from rbac.models import Permission
-        return Permission.objects.filter(roles__users=self).distinct()
+        return Permission.objects.filter(
+            models.Q(roles__users=self) | models.Q(roles__groups__users=self)
+        ).distinct()
     
     def has_permission(self, code: str) -> bool:
         return self.all_permissions.filter(code=code).exists()

@@ -37,7 +37,6 @@ DEFAULT_ACTION_MAP = {
 class PermissionCodeMixin:
     permission_code_map = {}
 
-    
     def get_required_permission(self):
         action = self.action
         return self.get_permission_code_map().get(action)

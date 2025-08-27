@@ -13,6 +13,8 @@ from drf_spectacular.utils import extend_schema_field
 # Show the User model without exposing the password field
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.StringRelatedField(many=True, read_only=True)
+    groups = serializers.StringRelatedField(many=True, read_only=True)
+
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'roles', 'groups')
@@ -104,7 +106,7 @@ class HistoricalUserSerializer(serializers.ModelSerializer):
         fields = [
             'history_id', 'history_date', 'history_type_display',
             'history_user', 'changes', 'username', 'email',
-            'first_name', 'last_name', 'roles', 'is_active'
+            'last_name', 'roles', 'is_active'
         ]
 
     @extend_schema_field(serializers.ListField(child=serializers.CharField()))

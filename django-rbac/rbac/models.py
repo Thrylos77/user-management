@@ -1,5 +1,4 @@
 from django.db import models
-from users.models import User
 from simple_history.models import HistoricalRecords
 
 class Permission(models.Model):
@@ -38,7 +37,7 @@ class Group(models.Model):
     """
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
-    roles = models.ManyToManyField(Role, related_name='groups', blank=True)
+    roles = models.ManyToManyField('rbac.Role', related_name='groups', blank=True)
     history = HistoricalRecords(
         history_user_id_field=models.PositiveIntegerField(null=True, blank=True),
     )

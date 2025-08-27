@@ -9,7 +9,6 @@ from .serializers import (
     )
 from rest_framework import status
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
-from users.logs.utils import log_action
 from rest_framework_simplejwt.views import TokenObtainPairView as SimpleJWTTokenObtainPairView
 from .utils import generate_otp, send_otp_email
 
@@ -17,7 +16,7 @@ from .utils import generate_otp, send_otp_email
 class TokenObtainPairView(SimpleJWTTokenObtainPairView):
     """
     Takes a set of user credentials and returns an access and refresh JSON web
-    token pair to prove the authentication of those credentials. Also logs the login action.
+    token pair to prove the authentication of those credentials.
     """
     permission_classes = [permissions.AllowAny]
     def post(self, request, *args, **kwargs):
@@ -27,7 +26,6 @@ class TokenObtainPairView(SimpleJWTTokenObtainPairView):
             # The user object is attached to the serializer after successful validation
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            log_action(serializer.user, 'LOGIN', 'User logged in.')
             
         return response
 
@@ -97,9 +95,6 @@ class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # Log the action after successfully blacklisting the token
-        log_action(request.user, 'LOGOUT', 'User logged out.')
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -163,9 +158,9 @@ class ChangePasswordView(AutoPermissionMixin, generics.UpdateAPIView):
         return User.objects.none()
 
 # Reset Password OTP management
-class RequestOTPView(AutoPermissionMixin, generics.CreateAPIView):
+class RequestOTPView(generics.CreateAPIView):
     serializer_class = RequestOTPSerializer
-    resource = "user"
+    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
         user = serializer.context['user']
@@ -174,12 +169,9 @@ class RequestOTPView(AutoPermissionMixin, generics.CreateAPIView):
         print(f"Generated OTP: {code} for user: {user.email}")
         send_otp_email(user.email, code)
 
-class ResetPasswordView(AutoPermissionMixin, generics.CreateAPIView):
+class ResetPasswordView(generics.CreateAPIView):
     serializer_class = ResetPasswordSerializer
-    resource = "user"
-    permission_code_map = {
-        'POST': resource + '.reset_password'
-    }
+    permission_classes = [permissions.AllowAny]
 
     def perform_create(self, serializer):
         user = serializer.context['user']
