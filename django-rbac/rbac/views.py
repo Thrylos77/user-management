@@ -73,7 +73,7 @@ class BaseRoleAssignmentView(AutoPermissionMixin, generics.GenericAPIView):
     permission_suffix = None  # ex: "assign_role" or "remove_role"
 
     def get_permission_code_map(self):
-        return {'POST': f"{self.resource}.{self.permission_suffix}"}
+        return {'POST': f"{self.permission_suffix}"}
 
     def post(self, request, user_id):
         serializer = self.get_serializer(data=request.data)
@@ -109,36 +109,50 @@ class BaseUserGroupView(AutoPermissionMixin, generics.GenericAPIView):
     Subclasses define the `action` attribute as 'add' or 'remove'.
     """
     serializer_class = UserGroupAssignmentSerializer
-    queryset = User.objects.all()
-    lookup_url_kwarg = 'user_id'
+    queryset = Group.objects.all()
+    lookup_url_kwarg = 'group_id'
     resource = 'rbac'
     action_type = None  # 'add' or 'remove'
-    permission_suffix = None  # ex: "add_user_to_group" or "remove_user_from_group"
+    permission_suffix = None  # ex: "add_user_group" or "remove_user_group"
 
     def get_permission_code_map(self):
-        return {'POST': f"{self.resource}.{self.permission_suffix}"}
+        return {'POST': f"{self.permission_suffix}"}
 
-    def post(self, request, user_id):
+    def post(self, request, group_id):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        group = self.get_object()
 
-        user = self.get_object()
-        group = get_object_or_404(Group, pk=serializer.validated_data['group_id'])
+        users = serializer.validated_data['user_ids']
+
+        added_users, skipped_users = [], []
 
         if self.action_type == 'add':
-            if group in user.groups.all():
-                return Response({"detail": "User already in this group."}, status=400)
-            user.groups.add(group)
-            message = f"User '{user.username}' added to group '{group.name}'."
+            for user in users:
+                if group.users.filter(id=user.id).exists():
+                    skipped_users.append(user.username)
+                else:
+                    group.users.add(user)
+                    added_users.append(user.username)
+            message = f"Users added to group '{group.name}'."
+            if skipped_users:
+                message += f"; Users skipped: {skipped_users}"
+
         elif self.action_type == 'remove':
-            if group not in user.groups.all():
-                return Response({"detail": "User is not in this group."}, status=400)
-            user.groups.remove(group)
-            message = f"User '{user.username}' removed from group '{group.name}'."
+            for user in users:
+                if not group.users.filter(id=user.id).exists():
+                    skipped_users.append(user.username)
+                else:
+                    group.users.remove(user)
+                    added_users.append(user.username)
+            message = f"Users removed: {added_users}"
+            if skipped_users:
+                message += f"; Users not in group: {skipped_users}"
+
         else:
             return Response({"detail": "Invalid action."}, status=400)
 
-        return Response({"detail": message}, status=200)
+        return Response({"detail": message, "group": self.get_serializer(group).data}, status=200)
 
 
 class AssignRoleToUserView(BaseRoleAssignmentView):
@@ -152,11 +166,11 @@ class RemoveRoleFromUserView(BaseRoleAssignmentView):
 
 class AddUserToGroupView(BaseUserGroupView):
     action_type = 'add'
-    permission_suffix = "add_user_to_group"
+    permission_suffix = "add_user_group"
 
 class RemoveUserFromGroupView(BaseUserGroupView):
     action_type = 'remove'
-    permission_suffix = "remove_user_from_group"
+    permission_suffix = "remove_user_group"
 
 
 

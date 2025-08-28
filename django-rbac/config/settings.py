@@ -91,6 +91,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'users.utils.RegexPasswordValidator',
+        'OPTIONS': {
+            'pattern': r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$',
+            'message': 'Password must contain uppercase, lowercase, digit, and special character.'
+        }
+    },
+
 ]
 
 
@@ -159,7 +167,7 @@ SPECTACULAR_SETTINGS = {
 # JWT settings
 from datetime import timedelta
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     # Refresh token settings for logout and rotation
     "ROTATE_REFRESH_TOKENS": True,

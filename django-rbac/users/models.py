@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from simple_history.models import HistoricalRecords
@@ -36,6 +37,9 @@ class PasswordResetOTP(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
 
+    EXPIRATION_MINUTES = 5
+
     def is_valid(self):
-        # OTP valide pendant 10 minutes
-        return (timezone.now() - self.created_at).seconds < 300 and not self.is_used
+        # OTP is valid for 5 minutes
+        expiration_time = self.created_at + timedelta(minutes=self.EXPIRATION_MINUTES)
+        return timezone.now() < expiration_time and not self.is_used

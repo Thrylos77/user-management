@@ -29,6 +29,6 @@ urlpatterns = [
     # Assignations
     path('roles/assign/<int:user_id>/', AssignRoleToUserView.as_view(), name='assign-role'),
     path('roles/remove/<int:user_id>/', RemoveRoleFromUserView.as_view(), name='remove-role'),
-    path('groups/add_user/<int:user_id>/', AddUserToGroupView.as_view(), name='add-user-to-group'),
-    path('groups/remove_user/<int:user_id>/', RemoveUserFromGroupView.as_view(), name='remove-user-from-group'),
+    path('groups/add_user/<int:group_id>/', AddUserToGroupView.as_view(), name='add-user-to-group'),
+    path('groups/remove_user/<int:group_id>/', RemoveUserFromGroupView.as_view(), name='remove-user-from-group'),
 ]

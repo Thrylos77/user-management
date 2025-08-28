@@ -1,10 +1,14 @@
+from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rbac.permission_control import AutoPermissionMixin
 from .models import User, PasswordResetOTP
 from .serializers import (
-        UserSerializer, RegisterSerializer, LogoutSerializer,
-        ChangePasswordSerializer, HistoricalUserSerializer,
+        AdminChangePasswordSerializer, UserSerializer, RegisterSerializer, 
+        LogoutSerializer, ChangeOwnPasswordSerializer, HistoricalUserSerializer,
         RequestOTPSerializer, ResetPasswordSerializer
     )
 from rest_framework import status
@@ -59,7 +63,7 @@ class UserListView(AutoPermissionMixin, generics.ListAPIView):
 
     def get_queryset(self):
         is_active = self.request.query_params.get('is_active')
-        queryset = User.objects.all().order_by('username')
+        queryset = User.objects.all().order_by('id')
         if is_active is not None:
             # Convert the string 'true' or 'false' to a boolean
             is_active_bool = is_active.lower() == 'true'
@@ -128,45 +132,62 @@ class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
 # ----- Password management -----
 
 # USER to change their own password
-class ChangeOwnPasswordView(AutoPermissionMixin, generics.UpdateAPIView):
-    serializer_class = ChangePasswordSerializer
+class ChangeOwnPasswordView(AutoPermissionMixin, generics.GenericAPIView):
+    serializer_class = ChangeOwnPasswordSerializer
     resource = "user"
-    permission_code_map = {
-        'PATCH': resource + '.change_own_password'
-    }
+    permission_code_map = { 'PUT': 'change_own_password' }
 
-    def get_object(self):
-        return self.request.user
+    def put(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(instance=request.user)
+        
+        return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 # For role ADMIN or Superuser to change any User password
-class ChangePasswordView(AutoPermissionMixin, generics.UpdateAPIView):
-    serializer_class = ChangePasswordSerializer
+class AdminChangePasswordView(AutoPermissionMixin, generics.GenericAPIView):
+    serializer_class = AdminChangePasswordSerializer
     resource = "user"
-    permission_code_map = {
-        'PATCH': resource + '.change_password'
-    }
+    queryset = User.objects.all()
+    permission_code_map = { 'PUT': 'change_password' }
 
     def get_object(self):
         user_id = self.kwargs.get('pk')
-        return self.get_queryset().filter(pk=user_id).first()
+        return get_object_or_404(self.get_queryset(), pk=user_id)
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser or user.has_permission("user.change_password"):
-            return User.objects.all()
-        # Fallback None if the user don't have the permission
-        return User.objects.none()
+    def put(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(instance=user)
+        return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 # Reset Password OTP management
 class RequestOTPView(generics.CreateAPIView):
     serializer_class = RequestOTPSerializer
     permission_classes = [permissions.AllowAny]
+    cooldown_seconds = 120  #
+    # Check if the user is on cooldown
+    def _can_request_new_otp(self, user):
+        last_otp = PasswordResetOTP.objects.filter(user=user).order_by('-created_at').first()
+        if not last_otp:
+            return True, 0  # No previous OTP, can request
 
+        next_allowed_time = last_otp.created_at + timedelta(seconds=self.cooldown_seconds)
+        if timezone.now() < next_allowed_time:
+            remaining = int((next_allowed_time - timezone.now()).total_seconds())
+            return False, remaining
+        return True, 0
+    
     def perform_create(self, serializer):
         user = serializer.context['user']
+        can_request, remaining = self._can_request_new_otp(user)
+        if not can_request:
+            raise ValidationError(
+                {"detail": f"Please wait {remaining} seconds before requesting a new OTP."}
+            )
         code = generate_otp()
         PasswordResetOTP.objects.create(user=user, code=code)
-        print(f"Generated OTP: {code} for user: {user.email}")
         send_otp_email(user.email, code)
 
 class ResetPasswordView(generics.CreateAPIView):
