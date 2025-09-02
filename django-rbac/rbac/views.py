@@ -12,19 +12,20 @@ User = get_user_model()
 
 # ----- Permissions CRUD -----
 
+@extend_schema(tags=["Permissions"])
 class PermissionListView(AutoPermissionMixin, generics.ListAPIView):
     queryset = Permission.objects.all().order_by('code')
     serializer_class = PermissionSerializer
     resource = "permission"
 
-
+@extend_schema(tags=["Permissions"])
 class PermissionRetrieveUpdateView(AutoPermissionMixin, generics.RetrieveUpdateAPIView):
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
     resource = "permission"
 
 # ----- Roles CRUD -----
-
+@extend_schema(tags=["Roles"])
 class RoleListCreateView(AutoPermissionMixin, generics.ListCreateAPIView):
     queryset = Role.objects.all().order_by('name')
     resource = "role"
@@ -34,14 +35,14 @@ class RoleListCreateView(AutoPermissionMixin, generics.ListCreateAPIView):
             return RoleSerializer
         return RoleListSerializer
 
-
+@extend_schema(tags=["Roles"])
 class RoleRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = Role.objects.prefetch_related('permissions').all()
     serializer_class = RoleSerializer
     resource = "role"
 
 # ----- Groups CRUD -----
-
+@extend_schema(tags=["Groups"])
 class GroupListCreateView(AutoPermissionMixin, generics.ListCreateAPIView):
     queryset = Group.objects.all().order_by('name')
     resource = "group"
@@ -51,14 +52,13 @@ class GroupListCreateView(AutoPermissionMixin, generics.ListCreateAPIView):
             return GroupSerializer
         return GroupListSerializer
 
-
+@extend_schema(tags=["Groups"])
 class GroupRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = Group.objects.prefetch_related('roles').all()
     serializer_class = GroupSerializer
     resource = "group"
 
 # ----- Assign/Add & Remove -----
-
 class BaseRoleAssignmentView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = RoleAssignmentSerializer
     queryset = User.objects.all().order_by('username')
@@ -139,19 +139,23 @@ class BaseUserGroupView(AutoPermissionMixin, generics.GenericAPIView):
 
         return Response({"detail": message}, status=status_code)
 
+@extend_schema(tags=["Assignments"])
 class AssignRoleToUserView(BaseRoleAssignmentView):
     action_type = "assign"
     permission_suffix = "assign_role"
 
+@extend_schema(tags=["Assignments"])
 class RemoveRoleFromUserView(BaseRoleAssignmentView):
     action_type = "remove"
     permission_suffix = "remove_role"
 
 
+@extend_schema(tags=["Assignments"])
 class AddUserToGroupView(BaseUserGroupView):
     action_type = 'add'
     permission_suffix = "add_user_group"
 
+@extend_schema(tags=["Assignments"])
 class RemoveUserFromGroupView(BaseUserGroupView):
     action_type = 'remove'
     permission_suffix = "remove_user_group"
@@ -175,6 +179,7 @@ class BaseHistoryListView(generics.ListAPIView):
         return self.model.history.filter(id=obj_pk).order_by('-history_date')
 
     # Permissions
+@extend_schema(tags=["Permissions"])
 class PermissionHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     # Retrieves the change history for a specific permission.
     serializer_class = HistoricalPermissionSerializer
@@ -182,7 +187,7 @@ class PermissionHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     resource = "permission_history"
 
 
-@extend_schema_view(get=extend_schema(operation_id="all_permission_history"))
+@extend_schema_view(get=extend_schema(operation_id="all_permission_history", tags=["Permissions"]))
 class AllPermissionHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     serializer_class = HistoricalPermissionSerializer
     get_all = True
@@ -190,19 +195,21 @@ class AllPermissionHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     resource = "permission_history"
 
     # Roles
+@extend_schema(tags=["Roles"])
 class RoleHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     # Retrieves the change history for a specific role.
     serializer_class = HistoricalRoleSerializer
     model = Role
     resource = "role_history"
 
-@extend_schema_view(get=extend_schema(operation_id="all_role_history"))
+@extend_schema_view(get=extend_schema(operation_id="all_role_history", tags=["Roles"]))
 class AllRoleHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     serializer_class = HistoricalRoleSerializer
     resource = "role_history"
     queryset = Role.history.all().order_by('-history_date')
 
     # Groups
+@extend_schema(tags=["Groups"])
 class GroupHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     # Retrieves the change history for a specific Group.
     serializer_class = HistoricalGroupSerializer
@@ -210,6 +217,7 @@ class GroupHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     resource = "group_history"
 
 @extend_schema_view(get=extend_schema( operation_id="all_group_history" ))
+@extend_schema(tags=["Groups"])
 class AllGroupHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     serializer_class = HistoricalGroupSerializer
     resource = "group_history"

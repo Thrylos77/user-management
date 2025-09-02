@@ -8,6 +8,7 @@ User = get_user_model()
 
 # ----- Serializers -----
 class PermissionSerializer(serializers.ModelSerializer):
+    code = serializers.CharField(read_only=True)  # Make 'code' read-only to prevent changes after creation
     class Meta:
         model = Permission
         fields = ('id', 'code', 'label', 'description')

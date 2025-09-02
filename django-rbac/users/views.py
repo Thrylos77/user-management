@@ -13,6 +13,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView as SimpleJWTToken
 from .utils import generate_otp, send_otp_email
 
 # Custom TokenObtainPairView to log user login
+@extend_schema(tags=["Users"])
 class TokenObtainPairView(SimpleJWTTokenObtainPairView):
     """
     Takes a set of user credentials and returns an access and refresh JSON web
@@ -30,11 +31,13 @@ class TokenObtainPairView(SimpleJWTTokenObtainPairView):
         return response
 
 # Register a new user
+@extend_schema(tags=["Users"])
 class RegisterView(AutoPermissionMixin, generics.CreateAPIView):
     serializer_class = RegisterSerializer
     resource = "user"
 
 # This view allows users to retrieve their own details
+@extend_schema(tags=["Users"])
 class UserDetailView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -51,7 +54,8 @@ class UserDetailView(generics.RetrieveAPIView):
             location=OpenApiParameter.QUERY,
             description='Filter users by active status (true/false)'
         ),
-    ]
+    ],
+    tags=["Users"]
 )
 class UserListView(AutoPermissionMixin, generics.ListAPIView):
     serializer_class = UserSerializer
@@ -70,6 +74,7 @@ class UserListView(AutoPermissionMixin, generics.ListAPIView):
 
 
 # This view allows admins to retrieve, update, or delete a user by their ID
+@extend_schema(tags=["Users"])
 class UserRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -87,6 +92,7 @@ class UserRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdate
 
 
 # A view for logging user logout and blacklisting the refresh token
+@extend_schema(tags=["Users"])
 class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = LogoutSerializer
 
@@ -99,7 +105,7 @@ class LogoutView(AutoPermissionMixin, generics.GenericAPIView):
 
 
 # ----- Historical Read -----
-
+@extend_schema(tags=["Users"])
 class UserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     # Retrieves the change history for a specific user.
     serializer_class = HistoricalUserSerializer
@@ -109,7 +115,7 @@ class UserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
         user_pk = self.kwargs['pk']
         return User.history.filter(id=user_pk).order_by('-history_date')
 
-@extend_schema_view(get=extend_schema(operation_id="all_user_history"))
+@extend_schema_view(get=extend_schema(operation_id="all_user_history", tags=["Users"]))
 class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     """
     Retrieves the complete change history for all users, ordered by most recent first.
@@ -124,6 +130,7 @@ class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
 # ----- Password management -----
 
 # USER to change their own password
+@extend_schema(tags=["Users"])
 class ChangeOwnPasswordView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = ChangeOwnPasswordSerializer
     resource = "user"
@@ -137,6 +144,7 @@ class ChangeOwnPasswordView(AutoPermissionMixin, generics.GenericAPIView):
         return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 # For role ADMIN or Superuser to change any User password
+@extend_schema(tags=["Users"])
 class AdminChangePasswordView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = AdminChangePasswordSerializer
     resource = "user"
@@ -155,6 +163,7 @@ class AdminChangePasswordView(AutoPermissionMixin, generics.GenericAPIView):
         return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 # Reset Password OTP management
+@extend_schema(tags=["Users"])
 class RequestOTPView(generics.CreateAPIView):
     serializer_class = RequestOTPSerializer
     permission_classes = [permissions.AllowAny]
@@ -182,6 +191,7 @@ class RequestOTPView(generics.CreateAPIView):
         PasswordResetOTP.objects.create(user=user, code=code)
         send_otp_email(user.email, code)
 
+@extend_schema(tags=["Users"])
 class ResetPasswordView(generics.CreateAPIView):
     serializer_class = ResetPasswordSerializer
     permission_classes = [permissions.AllowAny]
