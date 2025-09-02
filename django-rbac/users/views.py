@@ -6,11 +6,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rbac.permission_control import AutoPermissionMixin
 from .models import User, PasswordResetOTP
-from .serializers import (
-        AdminChangePasswordSerializer, UserSerializer, RegisterSerializer, 
-        LogoutSerializer, ChangeOwnPasswordSerializer, HistoricalUserSerializer,
-        RequestOTPSerializer, ResetPasswordSerializer
-    )
+from .serializers import *
 from rest_framework import status
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from rest_framework_simplejwt.views import TokenObtainPairView as SimpleJWTTokenObtainPairView
@@ -113,11 +109,7 @@ class UserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
         user_pk = self.kwargs['pk']
         return User.history.filter(id=user_pk).order_by('-history_date')
 
-@extend_schema_view(
-    get=extend_schema(
-        operation_id="all_user_history"
-    )
-)
+@extend_schema_view(get=extend_schema(operation_id="all_user_history"))
 class AllUserHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     """
     Retrieves the complete change history for all users, ordered by most recent first.

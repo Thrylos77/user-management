@@ -3,12 +3,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 from .models import Group, Role, Permission
-from .serializers import ( 
-        GroupSerializer, GroupListSerializer, RoleListSerializer, 
-        RoleSerializer, PermissionSerializer, RoleAssignmentSerializer, 
-        HistoricalPermissionSerializer, HistoricalRoleSerializer,
-        HistoricalGroupSerializer, UserGroupAssignmentSerializer,
-    )
+from .serializers import *
 from .permission_control import AutoPermissionMixin
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema_view, extend_schema
@@ -122,38 +117,27 @@ class BaseUserGroupView(AutoPermissionMixin, generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         group = self.get_object()
-
         users = serializer.validated_data['user_ids']
 
-        added_users, skipped_users = [], []
+        existing_ids = set(group.users.values_list('id', flat=True))
+        added, skipped = [], []
 
-        if self.action_type == 'add':
-            for user in users:
-                if group.users.filter(id=user.id).exists():
-                    skipped_users.append(user.username)
-                else:
-                    group.users.add(user)
-                    added_users.append(user.username)
-            message = f"Users added to group '{group.name}'."
-            if skipped_users:
-                message += f"; Users skipped: {skipped_users}"
+        for user in users:
+            in_group = user.id in existing_ids
+            if self.action_type == 'add' and not in_group:
+                group.users.add(user)
+                added.append(user.username)
+            elif self.action_type == 'remove' and in_group:
+                group.users.remove(user)
+                added.append(user.username)
+            else:
+                skipped.append(user.username)
 
-        elif self.action_type == 'remove':
-            for user in users:
-                if not group.users.filter(id=user.id).exists():
-                    skipped_users.append(user.username)
-                else:
-                    group.users.remove(user)
-                    added_users.append(user.username)
-            message = f"Users removed: {added_users}"
-            if skipped_users:
-                message += f"; Users not in group: {skipped_users}"
+        status_code = 200 if added else 409
+        action_word = "added" if self.action_type == 'add' else "removed"
+        message = f"Users {action_word}: {added}" if added else f"No users {action_word}; skipped: {skipped}"
 
-        else:
-            return Response({"detail": "Invalid action."}, status=400)
-
-        return Response({"detail": message, "group": self.get_serializer(group).data}, status=200)
-
+        return Response({"detail": message}, status=status_code)
 
 class AssignRoleToUserView(BaseRoleAssignmentView):
     action_type = "assign"
@@ -198,11 +182,7 @@ class PermissionHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     resource = "permission_history"
 
 
-@extend_schema_view(
-    get=extend_schema(
-        operation_id="all_permission_history"
-    )
-)
+@extend_schema_view(get=extend_schema(operation_id="all_permission_history"))
 class AllPermissionHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     serializer_class = HistoricalPermissionSerializer
     get_all = True
@@ -216,11 +196,7 @@ class RoleHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     model = Role
     resource = "role_history"
 
-@extend_schema_view(
-    get=extend_schema(
-        operation_id="all_role_history"
-    )
-)
+@extend_schema_view(get=extend_schema(operation_id="all_role_history"))
 class AllRoleHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     serializer_class = HistoricalRoleSerializer
     resource = "role_history"
@@ -233,11 +209,7 @@ class GroupHistoryListView(AutoPermissionMixin, BaseHistoryListView):
     model = Group
     resource = "group_history"
 
-@extend_schema_view(
-    get=extend_schema(
-        operation_id="all_group_history"
-    )
-)
+@extend_schema_view(get=extend_schema( operation_id="all_group_history" ))
 class AllGroupHistoryListView(AutoPermissionMixin, generics.ListAPIView):
     serializer_class = HistoricalGroupSerializer
     resource = "group_history"

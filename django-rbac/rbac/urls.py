@@ -1,11 +1,5 @@
 from django.urls import path
-from .views import (
-    AddUserToGroupView, AllGroupHistoryListView, AllPermissionHistoryListView, AllRoleHistoryListView, 
-    GroupHistoryListView, GroupListCreateView, GroupRetrieveUpdateDestroyView, 
-    PermissionHistoryListView, PermissionListView, PermissionRetrieveUpdateView, RemoveUserFromGroupView, 
-    RoleHistoryListView, RoleListCreateView, RoleRetrieveUpdateDestroyView,
-    AssignRoleToUserView, RemoveRoleFromUserView
-)
+from .views import *
 
 urlpatterns = [
     # Permissions
