@@ -19,6 +19,7 @@ urlpatterns = [
     path('groups/<int:pk>/', GroupRetrieveUpdateDestroyView.as_view(), name='group-rud'),
     path('groups/history/<int:pk>/', GroupHistoryListView.as_view(), name='group-history-detail'),
     path('groups/history/', AllGroupHistoryListView.as_view(), name='group-history-list'),
+    path('groups/<int:group_id>/users/', GroupUsersListView.as_view(), name='group-users-list'),
 
     # Assignations
     path('roles/assign/<int:user_id>/', AssignRoleToUserView.as_view(), name='assign-role'),

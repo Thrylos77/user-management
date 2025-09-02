@@ -70,6 +70,11 @@ class UserGroupAssignmentSerializer(serializers.Serializer):
             "users": [user.username for user in instance.users.all()]
         }
 
+class UserMinimalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email')
+        read_only_fields = fields
 
 # ----- Historical Serializers -----
 

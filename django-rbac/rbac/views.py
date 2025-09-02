@@ -58,6 +58,16 @@ class GroupRetrieveUpdateDestroyView(AutoPermissionMixin, generics.RetrieveUpdat
     serializer_class = GroupSerializer
     resource = "group"
 
+@extend_schema(tags=["Groups"])
+class GroupUsersListView(AutoPermissionMixin, generics.ListAPIView):
+    serializer_class = UserMinimalSerializer
+    lookup_url_kwarg = 'group_id'
+    resource = 'group'
+
+    def get_queryset(self):
+        group = Group.objects.prefetch_related('users').get(id=self.kwargs['group_id'])
+        return group.users.all()
+
 # ----- Assign/Add & Remove -----
 class BaseRoleAssignmentView(AutoPermissionMixin, generics.GenericAPIView):
     serializer_class = RoleAssignmentSerializer
