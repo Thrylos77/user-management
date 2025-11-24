@@ -1,8 +1,10 @@
 import json
 from rest_framework import serializers
-from .models import Group, Role, Permission
 from drf_spectacular.utils import extend_schema_field
 from django.contrib.auth import get_user_model
+
+from .models import Group, Role, Permission
+from .services import role_service, group_service
 
 User = get_user_model()
 
@@ -35,6 +37,10 @@ class RoleSerializer(serializers.ModelSerializer):
         # 'permissions' is for output (read), 'permission_ids' is for input (write).
         fields = ('id', 'name', 'description', 'permissions', 'permission_ids')
 
+    def create(self, validated_data):
+        permissions = validated_data.pop('permissions', [])
+        return role_service.create_role(validated_data['name'], validated_data['description'], permissions)
+
 class RoleAssignmentSerializer(serializers.Serializer):
     # Serializer for the role assignment/removal endpoints.
     role_id = serializers.IntegerField(required=True, help_text="The ID of the role to assign or remove.")
@@ -54,6 +60,11 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ['id', 'name', 'description', 'roles', 'role_ids']
+
+    def create(self, validated_data):
+        roles = validated_data.pop('roles', [])
+        return group_service.create_group(validated_data['name'], validated_data['description'], roles)
+
 
 class UserGroupAssignmentSerializer(serializers.Serializer):
     users = serializers.StringRelatedField(many=True, read_only=True)

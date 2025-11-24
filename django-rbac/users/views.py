@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rbac.permission_control import AutoPermissionMixin
+from rbac.services.permission_service import AutoPermissionMixin
 from .models import User, PasswordResetOTP
 from .serializers import *
 from rest_framework import status
